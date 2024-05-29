@@ -1,0 +1,60 @@
+volumes:
+  redis-data:
+
+services:
+  web:
+    build: .
+    ports:
+      - ${SERVICE_API_PORT}:8000
+    command: uvicorn main:app --host 0.0.0.0 --reload --port 8000
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+    logging:
+      options:
+        max-file: "5"
+        max-size: "20m"
+
+  worker:
+    build: .
+    command: celery -A worker.celery worker --loglevel=info
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - web
+      - redis
+    logging:
+      options:
+        max-file: "5"
+        max-size: "20m"
+
+  redis:
+    image: redis:7.2.5-alpine
+    expose:
+      - 6379
+    volumes:
+      - redis-data:/data
+    logging:
+      options:
+        max-file: "5"
+        max-size: "20m"
+
+  dashboard:
+    build: .
+    command: celery --broker=redis://redis:6379/0 flower --port=5555
+    ports:
+      - ${CELERY_FLOWER_PORT}:5555
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - web
+      - redis
+      - worker
+    logging:
+      options:
+        max-file: "5"
+        max-size: "20m"
