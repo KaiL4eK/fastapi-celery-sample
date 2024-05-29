@@ -1,6 +1,5 @@
 from celery.result import AsyncResult
-from fastapi import Body, FastAPI
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI
 from pydantic import BaseModel
 
 from worker import create_task
@@ -20,7 +19,7 @@ async def run_task(payload: Request):
 
 
 @app.get("/tasks/{task_id}")
-async def get_status(task_id):
+async def get_status(task_id: str):
     task_result = AsyncResult(task_id)
     result = {
         "task_id": task_id,
